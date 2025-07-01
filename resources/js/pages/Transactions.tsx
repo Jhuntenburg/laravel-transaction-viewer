@@ -85,32 +85,48 @@ export default function Transactions() {
     // PRESENTATION POINT 2: Real-time Updates
     // This is the core of our real-time functionality.
     // Every 5 seconds, it checks for new transactions and notifies the user when new data arrives.
+    // Updates work across ALL pages, maintaining user's relative position in the dataset.
     useEffect(() => {
         const interval = setInterval(() => {
             if (!lastTimestamp) return;
 
-            // Only poll for new transactions when on first page
-            if (pagination.current_page !== 1) return;
-
+            // Poll for new transactions on any page
             fetch(`/transactions?since=${lastTimestamp}`)
                 .then((res) => res.json())
                 .then(({ data }: { data: Transaction[] }) => {
                     if (data.length > 0) {
-                        // Only add new transactions if they match the current filter
+                        // Only consider transactions that match the current filter
                         const filteredNewTransactions = filter === 'all'
                             ? data
                             : data.filter(t => t.accountType === filter);
 
                         if (filteredNewTransactions.length > 0) {
-                            // Don't add to the current array, instead trigger a reload
-                            // to maintain proper pagination
+                            // Calculate user's current position in the dataset
+                            const currentPosition = (pagination.current_page - 1) * pagination.per_page;
+                            
                             setNewTransactionCount(filteredNewTransactions.length);
                             setShowNotification(true);
                             setLastTimestamp(data[0].timestamp);
-
-                            // Reload data with current pagination to maintain correct limits
+                            
+                            // Adjust pagination to maintain relative position if needed
+                            if (pagination.current_page > 1) {
+                                // Calculate new page number considering new items
+                                const newPageNumber = Math.ceil(
+                                    (currentPosition + filteredNewTransactions.length) / pagination.per_page
+                                );
+                                
+                                // Only update if the page number would change
+                                if (newPageNumber !== pagination.current_page) {
+                                    setPagination(prev => ({
+                                        ...prev,
+                                        current_page: newPageNumber
+                                    }));
+                                }
+                            }
+                            
+                            // Reload data with adjusted pagination
                             fetchTransactions();
-
+                            
                             // Hide notification after 3 seconds
                             setTimeout(() => {
                                 setShowNotification(false);
@@ -122,7 +138,7 @@ export default function Transactions() {
         }, 5000); // Poll every 5 seconds
 
         return () => clearInterval(interval);
-    }, [lastTimestamp, filter, pagination.current_page]);
+    }, [lastTimestamp, filter, pagination.current_page, pagination.per_page]);
 
     // Change page size handler
     const handlePerPageChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
