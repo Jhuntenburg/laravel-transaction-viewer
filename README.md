@@ -1,3 +1,6 @@
+## Notes about this branch
+
+migrations and seeders are included with this repo, run migrations and seeders to start!
 
 ## Objective
 
