@@ -1,6 +1,8 @@
 <?php
 
+use App\Http\Controllers\ProfileController;
 use App\Models\Transaction;
+use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -36,7 +38,7 @@ Route::get('/transactions-view', function () {
         });
 
     // Debug what's being passed
-    \Log::info('Passing transactions to view: ' . count($transactions));
+    Log::info('Passing transactions to view: ' . count($transactions));
         
     return Inertia::render('Transactions', [
         'transactions' => $transactions,
