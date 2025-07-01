@@ -21,7 +21,7 @@ class GenerateTransactionsLoop extends Command
             
             $transaction = Transaction::create([
                 'timestamp' => now(),
-                'amount' => round(rand(100, 10000) / 100, 2),
+                'amount' => round((rand(0, 1) ? 1 : -1) * rand(100, 10000) / 100, 2), // 50% chance of negative amount
                 'description' => 'Auto Transaction #' . uniqid(),
                 'accountType' => $accountTypes[array_rand($accountTypes)],
             ]);

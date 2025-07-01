@@ -100,10 +100,14 @@ export default function Transactions() {
                             : data.filter(t => t.accountType === filter);
                             
                         if (filteredNewTransactions.length > 0) {
-                            setTransactions(prev => [...filteredNewTransactions, ...prev]);
+                            // Don't add to the current array, instead trigger a reload
+                            // to maintain proper pagination
                             setNewTransactionCount(filteredNewTransactions.length);
                             setShowNotification(true);
                             setLastTimestamp(data[0].timestamp);
+                            
+                            // Reload data with current pagination to maintain correct limits
+                            fetchTransactions();
                             
                             // Hide notification after 3 seconds
                             setTimeout(() => {
@@ -207,6 +211,31 @@ export default function Transactions() {
                         )}
                         </tbody>
                     </table>
+                    
+                    {/* Summary section */}
+                    <div className="mt-6 mb-4 p-4 bg-blue-50 border border-blue-200 rounded-md">
+                        <h2 className="text-lg font-semibold text-gray-800 mb-2">Transaction Summary</h2>
+                        <div className="flex flex-col sm:flex-row sm:justify-between">
+                            <div className="mb-2 sm:mb-0">
+                                <span className="font-medium text-gray-700">Total Transactions:</span>{' '}
+                                <span className="text-gray-900">{transactions.length}</span>
+                            </div>
+                            <div className="mb-2 sm:mb-0">
+                                <span className="font-medium text-gray-700">Total Amount:</span>{' '}
+                                <span className="text-gray-900">
+                                    ${transactions.reduce((sum, t) => sum + t.amount, 0).toFixed(2)}
+                                </span>
+                            </div>
+                            <div>
+                                <span className="font-medium text-gray-700">Average Amount:</span>{' '}
+                                <span className="text-gray-900">
+                                    ${transactions.length > 0 
+                                        ? (transactions.reduce((sum, t) => sum + t.amount, 0) / transactions.length).toFixed(2) 
+                                        : '0.00'}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
                     
                     {/* Pagination controls */}
                     <div className="mt-4 flex items-center justify-between">
