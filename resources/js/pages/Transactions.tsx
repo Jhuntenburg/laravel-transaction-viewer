@@ -37,36 +37,38 @@ export default function Transactions() {
         from: 1,
         to: Math.min(10, initialTransactions?.length || 0)
     });
-    
+
     // Transaction notification state
     const [newTransactionCount, setNewTransactionCount] = useState<number>(0);
     const [showNotification, setShowNotification] = useState<boolean>(false);
     const [isLoading, setIsLoading] = useState<boolean>(false);
-    
-    // Fetch transactions with pagination and filters
+
+    // PRESENTATION POINT 1: Data Loading Function
+    // This function fetches our transaction data from the server.
+    // It handles pagination, filtering, and updates the UI accordingly.
     const fetchTransactions = useCallback(() => {
         setIsLoading(true);
-        
+
         // Build query params
         const params = new URLSearchParams();
         params.append('page', pagination.current_page.toString());
         params.append('per_page', pagination.per_page.toString());
-        
+
         if (filter !== 'all') {
             params.append('accountType', filter);
         }
-        
+
         fetch(`/transactions?${params}`)
             .then(res => res.json())
             .then(({ data, pagination: paginationData }) => {
                 setTransactions(data);
                 setPagination(paginationData);
-                
+
                 // Update last timestamp if we get data and we're on the first page
                 if (data.length > 0 && pagination.current_page === 1) {
                     setLastTimestamp(data[0].timestamp);
                 }
-                
+
                 setIsLoading(false);
             })
             .catch(err => {
@@ -74,41 +76,41 @@ export default function Transactions() {
                 setIsLoading(false);
             });
     }, [filter, pagination.current_page, pagination.per_page]);
-    
+
     // Initial data load when filter or pagination changes
     useEffect(() => {
         fetchTransactions();
     }, [fetchTransactions]);
-    
-    // Polling for new transactions
+
+    // PRESENTATION POINT 2: Real-time Updates
+    // This is the core of our real-time functionality.
+    // Every 5 seconds, it checks for new transactions and notifies the user when new data arrives.
     useEffect(() => {
         const interval = setInterval(() => {
             if (!lastTimestamp) return;
-            
+
             // Only poll for new transactions when on first page
             if (pagination.current_page !== 1) return;
 
-            console.log("Polling for new transactions since", lastTimestamp);
             fetch(`/transactions?since=${lastTimestamp}`)
                 .then((res) => res.json())
                 .then(({ data }: { data: Transaction[] }) => {
-                    console.log("Poll response:", data);
                     if (data.length > 0) {
                         // Only add new transactions if they match the current filter
-                        const filteredNewTransactions = filter === 'all' 
-                            ? data 
+                        const filteredNewTransactions = filter === 'all'
+                            ? data
                             : data.filter(t => t.accountType === filter);
-                            
+
                         if (filteredNewTransactions.length > 0) {
                             // Don't add to the current array, instead trigger a reload
                             // to maintain proper pagination
                             setNewTransactionCount(filteredNewTransactions.length);
                             setShowNotification(true);
                             setLastTimestamp(data[0].timestamp);
-                            
+
                             // Reload data with current pagination to maintain correct limits
                             fetchTransactions();
-                            
+
                             // Hide notification after 3 seconds
                             setTimeout(() => {
                                 setShowNotification(false);
@@ -117,7 +119,7 @@ export default function Transactions() {
                     }
                 })
                 .catch((err) => console.error('Polling error:', err));
-        }, 5000); // Reduced to 5 seconds for testing (change back to 30000 later)
+        }, 5000); // Poll every 5 seconds
 
         return () => clearInterval(interval);
     }, [lastTimestamp, filter, pagination.current_page]);
@@ -131,7 +133,7 @@ export default function Transactions() {
             current_page: 1 // Reset to first page when changing page size
         }));
     };
-    
+
     // Change page handler
     const goToPage = (page: number) => {
         if (page < 1 || page > pagination.last_page) return;
@@ -141,7 +143,7 @@ export default function Transactions() {
     return (
         <div className="p-6 max-w-4xl mx-auto">
             <h1 className="text-2xl font-bold mb-4 text-gray-900">Transaction Viewer</h1>
-            
+
             {/* New transaction notification banner */}
             {showNotification && (
                 <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4 relative animate-pulse">
@@ -164,7 +166,7 @@ export default function Transactions() {
                         <option value="credit">Credit</option>
                     </select>
                 </div>
-                
+
                 <div>
                     <label className="mr-2">Items per page:</label>
                     <select
@@ -211,8 +213,9 @@ export default function Transactions() {
                         )}
                         </tbody>
                     </table>
-                    
-                    {/* Summary section */}
+
+                    {/* PRESENTATION POINT 3: Summary Analytics Section */}
+                    {/* This section provides a real-time summary of transaction data on the current page */}
                     <div className="mt-6 mb-4 p-4 bg-blue-50 border border-blue-200 rounded-md">
                         <h2 className="text-lg font-semibold text-gray-800 mb-2">Transaction Summary</h2>
                         <div className="flex flex-col sm:flex-row sm:justify-between">
@@ -229,15 +232,16 @@ export default function Transactions() {
                             <div>
                                 <span className="font-medium text-gray-700">Average Amount:</span>{' '}
                                 <span className="text-gray-900">
-                                    ${transactions.length > 0 
-                                        ? (transactions.reduce((sum, t) => sum + t.amount, 0) / transactions.length).toFixed(2) 
+                                    ${transactions.length > 0
+                                        ? (transactions.reduce((sum, t) => sum + t.amount, 0) / transactions.length).toFixed(2)
                                         : '0.00'}
                                 </span>
                             </div>
                         </div>
                     </div>
-                    
-                    {/* Pagination controls */}
+
+                    {/* PRESENTATION POINT 4: User Interaction Controls */}
+                    {/* These pagination controls allow users to navigate through large datasets */}
                     <div className="mt-4 flex items-center justify-between">
                         <div>
                             Showing {pagination.from || 0} to {pagination.to || 0} of {pagination.total} entries
@@ -250,13 +254,13 @@ export default function Transactions() {
                             >
                                 Previous
                             </button>
-                            
+
                             {Array.from({ length: Math.min(5, pagination.last_page) }).map((_, i) => {
                                 // Show pages around current page
                                 const pageOffset = Math.max(0, pagination.current_page - 3);
                                 const pageNum = i + 1 + pageOffset;
                                 if (pageNum > pagination.last_page) return null;
-                                
+
                                 return (
                                     <button
                                         key={pageNum}
@@ -267,7 +271,7 @@ export default function Transactions() {
                                     </button>
                                 );
                             })}
-                            
+
                             <button
                                 onClick={() => goToPage(pagination.current_page + 1)}
                                 disabled={pagination.current_page === pagination.last_page}

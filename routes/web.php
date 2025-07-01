@@ -1,5 +1,12 @@
 <?php
 
+/**
+ * PRESENTATION FILE #4: APPLICATION ROUTES
+ * 
+ * This file defines all web routes for the application.
+ * It demonstrates how Laravel + Inertia + React work together in a full-stack app.
+ */
+
 use App\Models\Transaction;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Route;
@@ -17,19 +24,25 @@ Route::middleware(['auth', 'verified'])->group(function () {
     })->name('dashboard');
 });
 
+// PRESENTATION POINT: API Endpoint Route
+// This route handles all transaction data requests from the frontend
+// It's used both for initial page loads and for real-time polling updates
 Route::get('/transactions', [TransactionController::class, 'index'])
     ->name('transactions.index');
 
+// PRESENTATION POINT: Server-Side Rendered Page Route
+// This demonstrates Laravel's server-side rendering with Inertia
+// Initial data is loaded server-side and passed to React for enhanced UX
 Route::get('/transactions-view', function () {
-    // Ensure we get transactions in the correct format
+    // Get initial transactions for first page load
     $transactions = Transaction::orderByDesc('timestamp')
         ->get()
         ->map(function($transaction) {
-            // Return only the needed fields
+            // Format transaction data consistently
             return [
                 'id' => $transaction->id,
                 'timestamp' => $transaction->timestamp,
-                'amount' => (float)$transaction->amount, // Convert to float
+                'amount' => (float)$transaction->amount, // Convert to float for proper JS handling
                 'description' => $transaction->description,
                 'accountType' => $transaction->accountType,
             ];

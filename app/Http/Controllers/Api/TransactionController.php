@@ -7,8 +7,22 @@ use App\Models\Transaction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
+/**
+ * PRESENTATION FILE #2: API CONTROLLER
+ * 
+ * This controller handles all API requests for transaction data.
+ * It provides both paginated data for normal viewing and
+ * filtered data for real-time updates via polling.
+ */
 class TransactionController extends Controller
 {
+    /**
+     * PRESENTATION POINT: Smart Data Endpoint
+     * 
+     * This single endpoint serves two purposes:
+     * 1. Provides paginated transaction data for normal viewing
+     * 2. Returns only new transactions when polling (using the 'since' parameter)
+     */
     public function index(Request $request)
     {
         $since = $request->query('since');
@@ -17,7 +31,9 @@ class TransactionController extends Controller
         
         $query = Transaction::query()->orderByDesc('timestamp');
 
-        // Apply timestamp filter for polling
+        // PRESENTATION POINT: Real-time Data Filtering
+        // When the frontend polls for updates, it sends the timestamp of the newest transaction it has
+        // This section returns only transactions newer than that timestamp
         if ($since) {
             $query->where('timestamp', '>', $since);
             // When polling for new data, we don't want to paginate
@@ -39,7 +55,9 @@ class TransactionController extends Controller
             $query->where('accountType', $request->accountType);
         }
         
-        // Get paginated results
+        // PRESENTATION POINT: Smart Pagination
+        // Laravel's built-in pagination makes it easy to handle large datasets efficiently
+        // We're using dynamic page sizes (10/20/50) based on user preference
         $paginatedTransactions = $query->paginate($perPage, ['*'], 'page', $page);
         
         // Format the transactions
